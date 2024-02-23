@@ -1,0 +1,58 @@
+Unitron AP II
+Controle da Language Card
+Equacoes por Fabio Belavenuto @ 04/2015
+Vetores da PAL 16R4 original levantados por Victor Trucco @ 01/2015 e testadas em 04/2015
+
+;CHIP APII_LG PAL16R4
+CHIP APII_LG GAL16V8
+
+CLK=1 A12=2 A13=3 A14=4 A15=5 RW=6 A0=7 A1=8 A3=9 GND=10
+/OE=11 DEVSEL=12 /ROMDIS=13 /writeram=14 /readram=15 /pagina=16 NC=17 RA12=18 RESET=19 VCC=20
+
+; CLK = sinal AX
+; A15..12, A3, A2 e A1 = barramento de enderecos
+; RW = R/W da cpu
+; DEVSEL = 0 quando CPU acessa de $C080 a $C08F
+; /ROMDIS = 0 desativa ROM e chaveia RAM no lugar
+; RA12 = endereco A12 da RAM
+; RESET = 0 indica reset
+;
+;D000 = 1101 = 2 bancos 4K
+;E000 = 1110 = banco 4K
+;F000 = 1111 = banco 4K
+; /ROMDIS = 1 acessando RAM ou ROM, RA12 = A12, /ROMDIS = 0 acessando RAM alta, RA12 depende de pagina e somente se A15..12=1101
+;
+; PAL16R4 = tem 4 flop-flops tipo D nas saidas 14,15,16 e 17
+; usar := para saida registrada. Clocks do flip-flop vem do pino 1
+; Saida C1 dos flip-flops sao feedback
+; /OE das saidas do flip-flop vem do pino 11, sempre ativos
+
+
+equations
+
+; 0 = ativado, 1 = desativado
+writeram := /DEVSEL * /A0 +
+		writeram * DEVSEL +
+		/RESET
+
+; 0 = ativado, 1 = desativado
+readram := /DEVSEL * /A0 * A1 +
+		/DEVSEL * A0 * /A1 +
+		readram * DEVSEL +
+		/RESET
+
+pagina := /DEVSEL * /A3 +
+		pagina * DEVSEL +
+		/RESET
+
+; 0 = ROM ou RAM, 1 = RAM ( /ROMDIS => 0 = RAM, 1 = ROM ou RAM )
+ROMDIS = A15 * A14 * A13 * /RW * /writeram + 
+		A15 * A14 * A12 * /RW * /writeram +
+		A15 * A14 * A13 * RW * /readram +
+		A15 * A14 * A12 * RW * /readram
+
+RA12 = /ROMDIS * A12 + 
+		/A15 * A12 +
+		/A14 * A12 +
+		A13 * A12 +
+		A12 * pagina
